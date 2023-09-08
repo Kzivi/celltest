@@ -246,7 +246,7 @@ def save_data():
         hDC.CreatePrinterDC(printer_name)
         printer_size = hDC.GetDeviceCaps(PHYSICALWIDTH), hDC.GetDeviceCaps(PHYSICALHEIGHT)
 
-        bmp = Image.open("C:/Users/Medion/Desktop/RC3563/temp/" + file_name)
+        bmp = Image.open("temp/" + file_name)
 
         hDC.StartDoc(file_name)
         hDC.StartPage()
