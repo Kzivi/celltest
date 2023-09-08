@@ -8,6 +8,11 @@ import os
 import configparser
 import sys
 import webbrowser
+import qrcode
+from datetime import datetime
+import win32print
+import win32ui
+from PIL import Image, ImageWin
 
 def open_linked_in():
     url = "https://www.linkedin.com/in/krzymowski/"
@@ -197,6 +202,33 @@ def save_data():
         )
         cursor = conn.cursor()
 
+        # Pobierz aktualny czas
+        current_time = datetime.now()
+
+        # Sformatuj czas jako "RRMMDDHHMMSS"
+        qrcode_value = current_time.strftime("%y%m%d%H%M%S")
+
+        # Generuj kod QR
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=4,
+        )
+
+        if id_value != "":
+            qrcode_value = id_value
+        else:
+            id_value = qrcode_value
+
+        qr.add_data(qrcode_value)
+        qr.make(fit=True)
+
+        img = qr.make_image(fill_color="black", back_color="white")
+
+        # Zapisz kod QR w katalogu "temp" z nazwą zawierającą czas
+        img.save("temp/" + qrcode_value + ".png")
+
         # Wstawienie danych do tabeli
         sql = "INSERT INTO celltest (serial, type, impedance, voltage, user) VALUES (%s, %s, %s, %s, %s)"
         values = (id_value, battery_value, resistance_value, voltage_value, authenticated_email)  # Use the authenticated email
@@ -204,13 +236,37 @@ def save_data():
 
         conn.commit()
 
+        PHYSICALWIDTH = 100
+        PHYSICALHEIGHT = 110
+
+        printer_name = win32print.GetDefaultPrinter()
+        file_name = qrcode_value + ".png"
+
+        hDC = win32ui.CreateDC()
+        hDC.CreatePrinterDC(printer_name)
+        printer_size = hDC.GetDeviceCaps(PHYSICALWIDTH), hDC.GetDeviceCaps(PHYSICALHEIGHT)
+
+        bmp = Image.open("C:/Users/Medion/Desktop/RC3563/temp/" + file_name)
+
+        hDC.StartDoc(file_name)
+        hDC.StartPage()
+
+        dib = ImageWin.Dib(bmp)
+        dib.draw(hDC.GetHandleOutput(), (0, 0, printer_size[0], printer_size[1]))
+
+        hDC.EndPage()
+        hDC.EndDoc()
+        hDC.DeleteDC()
+
         tk.messagebox.showinfo("Success", "The data has been added to the database.")
 
         # Wyczyszczenie pól tekstowych po dodaniu danych
         text_id.delete("1.0", tk.END)
+        #os.remove("temp/" + qrcode_value + ".png")
 
     except mysql.connector.Error as error:
         tk.messagebox.showerror("Error", f"Database connection error: {error}")
+        #os.remove("temp/" + qrcode_value + ".png")
 
     finally:
         if 'conn' in locals() and conn.is_connected():
